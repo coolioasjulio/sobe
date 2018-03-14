@@ -4,12 +4,12 @@
     "input_size": 416,
     "anchors": [0.57273, 0.677385, 1.87446, 2.06253, 3.33843, 5.47434, 7.88282, 3.52778, 9.77052, 9.16828],
     "max_box_per_image": 3,
-    "labels": ["bucket"]
+    "labels": ["cube"]
   },
 
   "train": {
-    "train_image_folder": "/scratch/coe_andrew/bucket/bucket-dataset/images/",
-    "train_annot_folder": "/scratch/coe_andrew/bucket/bucket-dataset/annotations/",
+    "train_image_folder": "Boxes/images/",
+    "train_annot_folder": "Boxes/annotations/",
 
     "train_times": 15,
     "pretrained_weights": "",

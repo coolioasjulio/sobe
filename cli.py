@@ -52,6 +52,7 @@ def parse_predict():
 
 
 def parse_train():
+    """
     argparser = argparse.ArgumentParser(
         description='Train and validate YOLO_v2 model on any dataset')
 
@@ -63,6 +64,8 @@ def parse_train():
     args = argparser.parse_args()
 
     config_path = args.config
+    """
+    config_path = 'config.json'
     with open(config_path) as config_buffer:
         config = json.loads(config_buffer.read())
 

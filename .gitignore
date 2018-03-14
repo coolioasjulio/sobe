@@ -1,2 +1,7 @@
 *.pyc
 *.orig
+
+~/*
+bucket-dataset-master/*
+robot-dataset/*
+Boxes/*

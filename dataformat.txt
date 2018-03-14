@@ -1,0 +1,11 @@
+<annotation>
+  <folder>{folder_name}</folder>
+  <filename>{image_name}</filename>
+  <size>
+    <width>{img_width}</width>
+    <height>{img_height}</height>
+    <depth>3</depth>
+  </size>
+  <segmented>0</segmented>
+{objects}
+</annotation>
