@@ -7,6 +7,8 @@ import numpy as np
 from tqdm import tqdm
 from utils import draw_boxes
 from frontend import YOLO
+import time
+import sys
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -20,7 +22,7 @@ def main(argstate):
     ###############################
     #   Make the model
     ###############################
-
+    global yolo
     yolo = YOLO(architecture=argstate.architecture,
                 input_size=argstate.input_size,
                 labels=argstate.labels,
@@ -60,7 +62,7 @@ def main(argstate):
         for i in tqdm(range(nb_frames)):
             _, image = video_reader.read()
 
-            boxes = yolo.predict(image)
+            boxes = yolo.predict(image, nms_threshold=0.35)
             image = draw_boxes(image, boxes, argstate.labels)
 
             video_writer.write(np.uint8(image))
@@ -68,8 +70,13 @@ def main(argstate):
         video_reader.release()
         video_writer.release()
     else:
+        global image
         image = cv2.imread(image_path)
+        image = cv2.resize(image, (320,240))
+        start = time.time()
         boxes = yolo.predict(image)
+        end = time.time()
+        print('Prediction took {} seconds!'.format(end-start))
         image = draw_boxes(image, boxes, argstate.labels)
 
         print(len(boxes), 'boxes are found')
@@ -78,5 +85,17 @@ def main(argstate):
 
 
 if __name__ == '__main__':
-    argstate = cli.parse_predict()
+    if(len(sys.argv) > 1):
+        argstate = cli.parse_predict()
+    else:
+        class A():
+            pass
+        argstate = A()
+        argstate.architecture = 'Tiny Yolo'
+        argstate.input_size = 416
+        argstate.labels = ['cube']
+        argstate.max_box_per_image = 3
+        argstate.anchors = [0.57273, 0.677385, 1.87446, 2.06253, 3.33843, 5.47434, 7.88282, 3.52778, 9.77052, 9.16828]
+        argstate.weights = 'save_tiny.h5'
+        argstate.input = 'cube.jpg'
     main(argstate)

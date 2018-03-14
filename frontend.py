@@ -1,22 +1,12 @@
 from keras.models import Model
-from keras.layers import Activation
-from keras.layers import BatchNormalization
 from keras.layers import Conv2D
-from keras.layers import Dense
-from keras.layers import Flatten
 from keras.layers import Input
 from keras.layers import Lambda
-from keras.layers import MaxPooling2D
 from keras.layers import Reshape
-from keras.layers.advanced_activations import LeakyReLU
 import tensorflow as tf
 import numpy as np
 import cv2
-from keras.applications.mobilenet import MobileNet
-from keras.layers.merge import concatenate
 from keras.optimizers import Adam
-from keras.optimizers import RMSprop
-from keras.optimizers import SGD
 from preprocessing import BatchGenerator
 from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
 from utils import BoundBox
@@ -264,7 +254,7 @@ class YOLO(object):
     def load_weights(self, weight_path):
         self.model.load_weights(weight_path)
 
-    def predict(self, image):
+    def predict(self, image, nms_threshold=None):
         image = cv2.resize(image, (self.input_size, self.input_size))
         image = self.feature_extractor.normalize(image)
 
@@ -274,7 +264,10 @@ class YOLO(object):
             (1, 1, 1, 1, self.max_box_per_image, 4))
 
         netout = self.model.predict([input_image, dummy_array])[0]
-        boxes = self.decode_netout(netout)
+        if nms_threshold:
+            boxes = self.decode_netout(netout, nms_threshold=nms_threshold)
+        else:
+            boxes = self.decode_netout(netout)
 
         return boxes
 
