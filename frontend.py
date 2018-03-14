@@ -47,7 +47,7 @@ class YOLO(object):
             raise Exception(
                 'Architecture not supported! Please use Full Yolo or Tiny Yolo!')
 
-        print(self.feature_extractor.get_output_shape())
+        # print(self.feature_extractor.get_output_shape())
         self.grid_h, self.grid_w = self.feature_extractor.get_output_shape()
         features = self.feature_extractor.extract(input_image)
 
@@ -75,7 +75,7 @@ class YOLO(object):
         layer.set_weights([new_kernel, new_bias])
 
         # print a summary of the whole model
-        self.model.summary()
+        # self.model.summary()
 
     def custom_loss(self, y_true, y_pred):
         mask_shape = tf.shape(y_true)[:4]
@@ -254,12 +254,17 @@ class YOLO(object):
     def load_weights(self, weight_path):
         self.model.load_weights(weight_path)
 
-    def predict(self, image, nms_threshold=None):
-        image = cv2.resize(image, (self.input_size, self.input_size))
+    def predict(self, image, nms_threshold=None, bgr=True):
+        if image.shape[0] != self.input_size or image.shape[1] != self.input_size:
+            image = cv2.resize(image, (self.input_size, self.input_size))
         image = self.feature_extractor.normalize(image)
-
-        input_image = image[:, :, ::-1]
-        input_image = np.expand_dims(input_image, 0)
+        
+        if bgr:
+            input_image = image[:, :, ::-1]
+            input_image = np.expand_dims(input_image, 0)
+        else:
+            input_image = np.expand_dims(image, 0)
+        
         dummy_array = dummy_array = np.zeros(
             (1, 1, 1, 1, self.max_box_per_image, 4))
 
