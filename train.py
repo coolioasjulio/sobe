@@ -26,7 +26,7 @@ def main(argstate):
                                                 argstate.labels)
 
     # parse annotations of the validation set, if any, otherwise split the training set
-    if os.path.exists(argstate.v_annot_folder):
+    if os.path.exists(argstate.valid.annot_folder):
         valid_imgs, valid_labels = parse_annotation(argstate.valid.annot_folder,
                                                     argstate.valid.image_folder,
                                                     argstate.labels)
@@ -48,7 +48,7 @@ def main(argstate):
     ###############################
 
     yolo = YOLO(architecture=argstate.architecture,
-                input_size=argstate.image_size,
+                input_size=argstate.input_size,
                 labels=argstate.labels,
                 max_box_per_image=argstate.mbpi,
                 anchors=argstate.anchors)
@@ -68,8 +68,8 @@ def main(argstate):
 
     yolo.train(train_imgs=train_imgs,
                valid_imgs=valid_imgs,
-               train_times=argstate.train_times,
-               valid_times=argstate.valid_times,
+               train_times=argstate.train.times,
+               valid_times=argstate.valid.times,
                nb_epoch=argstate.nb_epoch,
                learning_rate=argstate.learning_rate,
                batch_size=argstate.batch_size,

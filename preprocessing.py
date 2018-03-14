@@ -79,7 +79,7 @@ class BatchGenerator(Sequence):
 
         self.counter = 0
         self.anchors = [BoundBox(0, 0, config['ANCHORS'][2*i], config['ANCHORS'][2*i+1])
-                        for i in range(len(config['ANCHORS'])/2)]
+                        for i in range(len(config['ANCHORS'])//2)]
 
         # augmentors by https://github.com/aleju/imgaug
         def sometimes(aug): return iaa.Sometimes(0.5, aug)
