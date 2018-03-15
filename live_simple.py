@@ -59,7 +59,7 @@ while True:
         boxes = yolo.predict(frame, nms_threshold=0.2)
         out_img = draw_boxes(frame, boxes, ['cube'])
         end = time.time()
-        print('FPS: {}'.format(1.0/(end-start)))
+        print('\rFPS: {:.3f}'.format(1.0/(end-start)), end='')
         cv2.imshow('Image', out_img)
         if cv2.waitKey(1) == ord('q'):
             cam.release()
