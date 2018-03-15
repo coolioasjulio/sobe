@@ -1,7 +1,7 @@
 *.pyc
 *.orig
+*.h5
 
-~/*
 bucket-dataset-master/*
 robot-dataset/*
 Boxes/*
