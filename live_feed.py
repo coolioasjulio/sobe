@@ -2,8 +2,7 @@ from tqdm import tqdm
 import cv2
 from cv2 import CAP_PROP_FRAME_WIDTH as WIDTH_TAG
 from cv2 import CAP_PROP_FRAME_HEIGHT as HEIGHT_TAG
-
-CAM_OVERRIDE = False
+import time
 
 cam = cv2.VideoCapture(0)
 
@@ -30,7 +29,13 @@ def get_available_resolutions(cam, possible_resolutions):
     cam.set(HEIGHT_TAG, prev_height)
     return available_resolutions
 
-if not CAM_OVERRIDE:
+try:
+    best_resolution
+    RECALCULATE_BEST_RESOLUTION = False
+except:
+    RECALCULATE_BEST_RESOLUTION = True
+
+if RECALCULATE_BEST_RESOLUTION:
     available_resolutions = get_available_resolutions(cam, possible_resolutions)
     target_resolution = (416,416)
     best_resolution = min(available_resolutions, key=lambda x: sum([(a-b)**2 for a,b in zip(x,target_resolution)]))
@@ -43,18 +48,13 @@ import threading
 from utils import draw_boxes
 from frontend import YOLO
 
-lock = threading.Lock()
-image = None
+webcam_lock = threading.Lock()
+webcam_image = None
+detected_lock = threading.Lock()
+detected_image = None
 should_stop = False
-
-print('Creating model...', end = ' ')
-yolo = YOLO(architecture='Tiny Yolo',
-                input_size=416,
-                labels=['cube'],
-                max_box_per_image=3,
-                anchors=[0.57273, 0.677385, 1.87446, 2.06253, 3.33843, 5.47434, 7.88282, 3.52778, 9.77052, 9.16828])
-yolo.load_weights('save_tiny.h5')
-print('Done!')
+loaded = False
+past_fps = []
 
 def rgb_to_bgr(img):
     return cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
@@ -62,46 +62,66 @@ def rgb_to_bgr(img):
 def bgr_to_rgb(img):
     return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-def stop_thread():
-    while cv2.waitKey(0) != ord('q'):
+def capture_and_show():
+    while not loaded:
         pass
-    global should_stop
-    should_stop = True
-
-def _capture_thread():
-    global image, img
+    global webcam_image, should_stop
     while True:
-        r, img = cam.read()
+        r, frame = cam.read()
         if r:
-            img = cv2.resize(img, target_resolution)
-            img = bgr_to_rgb(img)
-            lock.acquire()
-            image = img
-            lock.release()
-        if should_stop:
-            cam.release()
-            break;
-    
-def _detection_thread():
-    global image, input_img
-    while True:
-        lock.acquire()
-        input_img = image
-        lock.release()
-        if type(input_img) != type(None):
-            boxes = yolo.predict(input_img, nms_threshold=0.35, bgr=False)
-            print('{} boxes'.format(len(boxes)))
-            out_img = draw_boxes(input_img, boxes, ['cube'])
-            out_img = bgr_to_rgb(out_img)
-            cv2.imshow('Image', out_img)
-        if should_stop:
+            frame = cv2.resize(frame,(416,416))
+            frame = bgr_to_rgb(frame)
+            webcam_lock.acquire()
+            webcam_image = frame
+            webcam_lock.release()
+        detected_lock.acquire()
+        img = detected_image
+        detected_lock.release()
+        if img is not None:
+            img = rgb_to_bgr(img)
+            cv2.imshow('Image',img)
+        if cv2.waitKey(1) == ord('q') or should_stop:
+            should_stop = True
             cv2.destroyAllWindows()
+            cam.release()
             break
 
-capture_thread = threading.Thread(target=_capture_thread, args = ())
+def _detection_thread():
+    global detected_image, loaded
+    print('Creating model...', end = ' ')
+    yolo = YOLO(architecture='Tiny Yolo',
+                    input_size=416,
+                    labels=['cube'],
+                    max_box_per_image=3,
+                    anchors=[0.57273, 0.677385, 1.87446, 2.06253, 3.33843, 5.47434, 7.88282, 3.52778, 9.77052, 9.16828])
+    yolo.load_weights('save_tiny.h5')
+    print('Done!')
+    loaded = True
+    while True:
+        webcam_lock.acquire()
+        img = webcam_image
+        webcam_lock.release()
+        if img is not None:
+            start = time.time()
+            boxes = yolo.predict(img, nms_threshold=0.5, bgr=False)
+            drawn_img = draw_boxes(img, boxes, ['cube'])
+            end = time.time()
+            fps = 1.0/(end-start)
+            past_fps.append(fps)
+            while len(past_fps) > 10:
+                del past_fps[0]
+            avg_fps = sum(past_fps)/len(past_fps)
+            print('\rFPS: {:.2f}'.format(avg_fps), end='')
+            detected_lock.acquire()
+            detected_image = drawn_img
+            detected_lock.release()
+        if should_stop:
+            break
+
+# capture_thread = threading.Thread(target=_cv2_thread, args = ())
 detection_thread = threading.Thread(target=_detection_thread, args = ())
 
-capture_thread.start()
+print('Starting capture!')
 detection_thread.start()
 
-stop_thread()
+capture_and_show()
