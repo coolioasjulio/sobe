@@ -9,6 +9,7 @@ from utils import draw_boxes
 from frontend import YOLO
 import time
 import sys
+from utils import BoundBox
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -23,17 +24,20 @@ def main(argstate):
     #   Make the model
     ###############################
     global yolo
-    yolo = YOLO(architecture=argstate.architecture,
-                input_size=argstate.input_size,
-                labels=argstate.labels,
-                max_box_per_image=argstate.max_box_per_image,
-                anchors=argstate.anchors)
-
-    ###############################
-    #   Load trained weights
-    ###############################
-
-    yolo.load_weights(weights_path)
+    try:
+        yolo.anchors
+    except:
+          yolo = YOLO(architecture=argstate.architecture,
+                      input_size=argstate.input_size,
+                      labels=argstate.labels,
+                      max_box_per_image=argstate.max_box_per_image,
+                      anchors=argstate.anchors)
+      
+          ###############################
+          #   Load trained weights
+          ###############################
+      
+          yolo.load_weights(weights_path)
 
     ###############################
     #   Predict bounding boxes
@@ -44,7 +48,7 @@ def main(argstate):
     # if it's a folder, do detection, save images with boundins boxes to another folder
 
     # if result folder is present, save annotations to the result folder
-
+    global image
     if image_path[-4:] == '.mp4':
         video_out = image_path[:-4] + '_detected' + image_path[-4:]
 
@@ -62,7 +66,7 @@ def main(argstate):
         for i in tqdm(range(nb_frames)):
             _, image = video_reader.read()
 
-            boxes = yolo.predict(image, nms_threshold=0.35)
+            boxes = yolo.predict(image, nms_threshold=0.3)
             image = draw_boxes(image, boxes, argstate.labels)
 
             video_writer.write(np.uint8(image))
@@ -70,32 +74,57 @@ def main(argstate):
         video_reader.release()
         video_writer.release()
     else:
-        global image
         image = cv2.imread(image_path)
-        image = cv2.resize(image, (320,240))
+        image = cv2.resize(image, (416,416))
+        img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         start = time.time()
-        boxes = yolo.predict(image)
+        boxes = yolo.predict(img_rgb)
         end = time.time()
         print('Prediction took {} seconds!'.format(end-start))
+        print(len(boxes), 'boxes are found')
+        try:
+              boxes.append(get_ground_truth(image_path))
+        except:
+              pass
         image = draw_boxes(image, boxes, argstate.labels)
 
-        print(len(boxes), 'boxes are found')
 
-        cv2.imwrite(image_path[:-4] + '_detected' + image_path[-4:], image)
+        # cv2.imwrite(image_path[:-4] + '_detected' + image_path[-4:], image)
+        
+        cv2.imshow('image', image)
+        cv2.waitKey(0)
 
+def get_ground_truth(image_path):
+      annot_name = image_path[image_path.rfind('\\')+1:image_path.rfind('.')] + '.xml'
+      annot_name = os.path.join('robot-dataset','annotations',annot_name)
+      with open(annot_name) as f:
+            annot = f.read()
+            global xmin,xmax,ymin,ymax
+            xmin = float(annot[annot.find('<xmin>')+6:annot.find('</xmin>')])
+            xmax = float(annot[annot.find('<xmax>')+6:annot.find('</xmax>')])
+            ymin = float(annot[annot.find('<ymin>')+6:annot.find('</ymin>')])
+            ymax = float(annot[annot.find('<ymax>')+6:annot.find('</ymax>')])
+            x = np.average((xmin,xmax))/416
+            y = np.average((ymin,ymax))/416
+            w = (xmax-xmin)/416
+            h = (ymax-ymin)/416
+            box = BoundBox(x,y,w,h,1.0,np.array((0.0,1.0)))
+            return box
 
 if __name__ == '__main__':
-    if(len(sys.argv) > 1):
-        argstate = cli.parse_predict()
-    else:
-        class A():
-            pass
-        argstate = A()
-        argstate.architecture = 'Tiny Yolo'
-        argstate.input_size = 416
-        argstate.labels = ['cube']
-        argstate.max_box_per_image = 3
-        argstate.anchors = [0.57273, 0.677385, 1.87446, 2.06253, 3.33843, 5.47434, 7.88282, 3.52778, 9.77052, 9.16828]
-        argstate.weights = 'save_tiny.h5'
-        argstate.input = 'cube.jpg'
-    main(argstate)
+    while True:
+          if(len(sys.argv) > 1):
+              argstate = cli.parse_predict()
+          else:
+              class A():
+                  pass
+              argstate = A()
+              argstate.architecture = 'Full Yolo'
+              argstate.input_size = 416
+              argstate.labels = ['robot','true_robot']
+              argstate.max_box_per_image = 3
+              argstate.anchors = [0.57273, 0.677385, 1.87446, 2.06253, 3.33843, 5.47434, 7.88282, 3.52778, 9.77052, 9.16828]
+              argstate.weights = 'robot_full_yolo_pretrained.h5'
+              
+              argstate.input = os.path.join('robot-dataset','images',np.random.choice(os.listdir('robot-dataset/images')))
+          main(argstate)

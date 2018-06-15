@@ -1,6 +1,11 @@
 *.pyc
 *.orig
 *.h5
+*.mp4
+*.jpg
+*.png
+
+logs/*
 
 bucket-dataset-master/*
 robot-dataset/*

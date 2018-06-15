@@ -10,6 +10,8 @@ import os
 import numpy as np
 from preprocessing import parse_annotation
 from frontend import YOLO
+from keras.callbacks import Callback
+from time import sleep
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -62,6 +64,10 @@ def main(argstate):
               argstate.pretrained_weights)
         yolo.load_weights(argstate.pretrained_weights)
 
+    # Load pretrained weights into feature extractor and then freeze them
+    yolo.feature_extractor.feature_extractor.load_weights('yolov2_weights.h5')
+    yolo.feature_extractor.feature_extractor.trainable = True
+    
     ###############################
     #   Start the training process
     ###############################
@@ -85,3 +91,11 @@ def main(argstate):
 if __name__ == '__main__':
     argstate = cli.parse_train()
     main(argstate)
+
+class TrainPauseCallback(Callback):
+      def __init__(self):
+            self.paused = False
+
+      def on_batch_end(self, batch, logs={}):
+            while self.paused:
+                  sleep(0.1)

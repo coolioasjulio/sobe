@@ -11,6 +11,8 @@ from preprocessing import BatchGenerator
 from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
 from utils import BoundBox
 from backend import TinyYoloFeature, FullYoloFeature
+import os
+from datetime import datetime
 
 
 class YOLO(object):
@@ -311,7 +313,7 @@ class YOLO(object):
             else:
                 return min(x2, x4) - x3
 
-    def decode_netout(self, netout, obj_threshold=0.4, nms_threshold=0.4):
+    def decode_netout(self, netout, obj_threshold=0., nms_threshold=0.):
         grid_h, grid_w, nb_box = netout.shape[:3]
 
         boxes = []
@@ -443,7 +445,8 @@ class YOLO(object):
         ############################################
         # Make a few callbacks
         ############################################
-
+        date = datetime.today().strftime('%m-%d_%H%M')
+        os.mkdir(os.path.join('logs', date))
         early_stop = EarlyStopping(monitor='val_loss',
                                    patience=3,
                                    mode='min',
@@ -453,9 +456,9 @@ class YOLO(object):
                                      save_best_only=True,
                                      mode='min',
                                      period=1)
-        tensorboard = TensorBoard(log_dir='~/logs/yolo/',
+        tensorboard = TensorBoard(log_dir=os.path.join('logs',date),
                                   histogram_freq=0,
-                                  write_graph=True,
+                                  write_graph=False,
                                   write_images=False)
 
         ############################################
