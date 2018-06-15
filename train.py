@@ -10,8 +10,8 @@ import os
 import numpy as np
 from preprocessing import parse_annotation
 from frontend import YOLO
-from keras.callbacks import Callback
-from time import sleep
+import tkinter as tk
+from threading import Thread
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -48,7 +48,7 @@ def main(argstate):
     ###############################
     #   Construct the model
     ###############################
-
+    global yolo
     yolo = YOLO(architecture=argstate.architecture,
                 input_size=argstate.input_size,
                 labels=argstate.labels,
@@ -67,6 +67,9 @@ def main(argstate):
     # Load pretrained weights into feature extractor and then freeze them
     yolo.feature_extractor.feature_extractor.load_weights('yolov2_weights.h5')
     yolo.feature_extractor.feature_extractor.trainable = True
+    
+    # Spawn train pauser
+    spawn_pause_ui()
     
     ###############################
     #   Start the training process
@@ -87,15 +90,26 @@ def main(argstate):
                saved_weights_name=argstate.saved_weights_name,
                debug=argstate.debug)
 
+def spawn_pause_ui():
+      root = tk.Tk()
+      PauseFrame(root).pack(fill='both',expand=True)
+      ui_thread = Thread(target=root.mainloop)
+      ui_thread.isDaemon = True
+      ui_thread.start()
+
+class PauseFrame(tk.Frame):
+      def __init__(self, parent):
+            tk.Frame.__init__(self, parent)
+            self.pause_text = tk.StringVar(self, value='Pause')
+            self.pause_button = tk.Button(self, textvariable=self.pause_text,
+                                          command=self.toggle_pause)
+            self.pause_button.pack(fill='both',expand=True)
+      
+      def toggle_pause(self):
+            yolo.pauser.paused = not yolo.pauser.paused
+            text = self.pause_text.get()
+            self.pause_text.set('Pause' if text=='Resume' else 'Resume')
 
 if __name__ == '__main__':
     argstate = cli.parse_train()
     main(argstate)
-
-class TrainPauseCallback(Callback):
-      def __init__(self):
-            self.paused = False
-
-      def on_batch_end(self, batch, logs={}):
-            while self.paused:
-                  sleep(0.1)

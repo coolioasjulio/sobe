@@ -8,12 +8,12 @@ import numpy as np
 import cv2
 from keras.optimizers import Adam
 from preprocessing import BatchGenerator
-from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
+from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard, Callback
 from utils import BoundBox
 from backend import TinyYoloFeature, FullYoloFeature
 import os
 from datetime import datetime
-
+from time import sleep
 
 class YOLO(object):
     def __init__(self,
@@ -460,6 +460,8 @@ class YOLO(object):
                                   histogram_freq=0,
                                   write_graph=False,
                                   write_images=False)
+        pauser = TrainPauseCallback()
+        self.pauser = pauser
 
         ############################################
         # Start the training process
@@ -474,6 +476,15 @@ class YOLO(object):
                                  validation_steps=len(
                                      valid_batch) * valid_times,
                                  callbacks=[early_stop,
-                                            checkpoint, tensorboard],
+                                            checkpoint, tensorboard, pauser],
                                  workers=3,
                                  max_queue_size=8)
+
+
+class TrainPauseCallback(Callback):
+      def __init__(self):
+            self.paused = False
+
+      def on_batch_end(self, batch, logs={}):
+            while self.paused:
+                  sleep(0.1)
