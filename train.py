@@ -34,7 +34,7 @@ def main(argstate):
                                                     argstate.labels)
     else:
         train_valid_split = int(0.8*len(train_imgs))
-        np.random.seed(42.)
+        np.random.seed(42)
         np.random.shuffle(train_imgs)
 
         valid_imgs = train_imgs[train_valid_split:]
