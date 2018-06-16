@@ -74,6 +74,7 @@ def main(argstate):
         video_reader.release()
         video_writer.release()
     else:
+        global boxes
         image = cv2.imread(image_path)
         image = cv2.resize(image, (416,416))
         img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -82,10 +83,12 @@ def main(argstate):
         end = time.time()
         print('Prediction took {} seconds!'.format(end-start))
         print(len(boxes), 'boxes are found')
+        """
         try:
               boxes.append(get_ground_truth(image_path))
         except:
               pass
+        """
         image = draw_boxes(image, boxes, argstate.labels)
 
 
@@ -121,10 +124,10 @@ if __name__ == '__main__':
               argstate = A()
               argstate.architecture = 'Full Yolo'
               argstate.input_size = 416
-              argstate.labels = ['robot','true_robot']
+              argstate.labels = ['robot']
               argstate.max_box_per_image = 3
               argstate.anchors = [0.57273, 0.677385, 1.87446, 2.06253, 3.33843, 5.47434, 7.88282, 3.52778, 9.77052, 9.16828]
-              argstate.weights = 'robot_full_yolo_pretrained.h5'
+              argstate.weights = 'robot_full_yolo_pretrained-4301.h5'
               
               argstate.input = os.path.join('robot-dataset','images',np.random.choice(os.listdir('robot-dataset/images')))
           main(argstate)

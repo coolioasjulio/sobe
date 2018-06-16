@@ -14,7 +14,7 @@
     "train_times": 15,
     "pretrained_weights": "",
     "batch_size": 8,
-    "learning_rate": 1.7e-5,
+    "learning_rate": 8e-6,
     "nb_epoch": 50,
     "warmup_batches": 250,
 

@@ -34,6 +34,7 @@ def main(argstate):
                                                     argstate.labels)
     else:
         train_valid_split = int(0.8*len(train_imgs))
+        np.random.seed(42.)
         np.random.shuffle(train_imgs)
 
         valid_imgs = train_imgs[train_valid_split:]
@@ -69,7 +70,9 @@ def main(argstate):
     yolo.feature_extractor.feature_extractor.trainable = True
     
     # Spawn train pauser
-    spawn_pause_ui()
+    pause_thread = Thread(target=spawn_pause_ui)
+    pause_thread.isDaemon = True
+    pause_thread.start()
     
     ###############################
     #   Start the training process
@@ -93,9 +96,7 @@ def main(argstate):
 def spawn_pause_ui():
       root = tk.Tk()
       PauseFrame(root).pack(fill='both',expand=True)
-      ui_thread = Thread(target=root.mainloop)
-      ui_thread.isDaemon = True
-      ui_thread.start()
+      root.mainloop()
 
 class PauseFrame(tk.Frame):
       def __init__(self, parent):

@@ -8,7 +8,7 @@ import numpy as np
 import cv2
 from keras.optimizers import Adam
 from preprocessing import BatchGenerator
-from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard, Callback
+from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard, Callback, ReduceLROnPlateau
 from utils import BoundBox
 from backend import TinyYoloFeature, FullYoloFeature
 import os
@@ -447,19 +447,26 @@ class YOLO(object):
         ############################################
         date = datetime.today().strftime('%m-%d_%H%M')
         os.mkdir(os.path.join('logs', date))
+        """
         early_stop = EarlyStopping(monitor='val_loss',
                                    patience=3,
                                    mode='min',
                                    verbose=1)
+        """
         checkpoint = ModelCheckpoint(saved_weights_name,
                                      monitor='val_loss',
                                      save_best_only=True,
                                      mode='min',
                                      period=1)
         tensorboard = TensorBoard(log_dir=os.path.join('logs',date),
-                                  histogram_freq=0,
+                                  histogram_freq=1,
                                   write_graph=False,
-                                  write_images=False)
+                                  write_images=True,
+                                  write_grads=True)
+        reduce_lr = ReduceLROnPlateau(monitor='val_loss',
+                                      factor=0.2,
+                                      patience=3,
+                                      min_lr=5e-7)
         pauser = TrainPauseCallback()
         self.pauser = pauser
 
@@ -475,7 +482,7 @@ class YOLO(object):
                                  validation_data=valid_batch,
                                  validation_steps=len(
                                      valid_batch) * valid_times,
-                                 callbacks=[early_stop,
+                                 callbacks=[reduce_lr,
                                             checkpoint, tensorboard, pauser],
                                  workers=3,
                                  max_queue_size=8)
